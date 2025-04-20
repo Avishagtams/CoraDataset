@@ -16,13 +16,13 @@ CATEGORY_MAPPING = {
     'Genetic_Algorithms': 'Systems'
 }
 
-# צבעים לנושאים
+# Mapping color
 COLOR_MAP = {'AI': 'red', 'Theory': 'blue', 'Systems': 'green'}
 
 
 def compute_and_save_central_nodes(G_sub, top_n=5):
 
-    print("\n=== מדדי מרכזיות עבור צמתים מעניינים ===")
+    print("\n=== Centrality measures for interesting nodes ===")
     degree_centrality = nx.degree_centrality(G_sub)
     closeness_centrality = nx.closeness_centrality(G_sub)
     betweenness_centrality = nx.betweenness_centrality(G_sub)
@@ -34,20 +34,18 @@ def compute_and_save_central_nodes(G_sub, top_n=5):
         'betweenness_centrality': pd.Series(betweenness_centrality)
     })
 
-    # מחשבים ציון ממוצע למדדי המרכזיות
+    # Calculate average score for centrality indicators
     df['avg_score'] = df[['degree_centrality', 'closeness_centrality', 'betweenness_centrality']].mean(axis=1)
 
-    # שומרים רק את 5 הצמתים הכי מעניינים
+    # Only the 5 most interesting nodes are kept
     top_df = df.sort_values(by='avg_score', ascending=False).head(top_n).drop(columns='avg_score')
-
-    # מדפיסים למסך
     print(top_df.to_string(index=False))
 
-    # שומרים לקובץ
+    # saving-file
     top_df.to_csv("centrality_measures_top_nodes.csv", index=False)
     print("נשמר הקובץ: centrality_measures_top_nodes.csv")
 
-    # גרפים לכל צומת מעניין
+    # Create graph
     for _, row in top_df.iterrows():
         node_id = row['id']
         measures = {
@@ -72,7 +70,7 @@ def plot_normalized_degree_distributions_fixed(G_sub):
         from matplotlib.ticker import MaxNLocator
         count = Counter(degrees)
 
-        # חיתוך לפי דרגה מקסימלית אם ביקשו
+
         if max_degree:
             count = {k: v for k, v in count.items() if k <= max_degree}
 
@@ -147,7 +145,7 @@ def plot_category_normalized_degrees(G_sub):
     }
 
     for category, color in COLORS.items():
-        # סינון צמתים לפי הקטגוריה
+        # Filter nodes by category
         nodes = [n for n, attr in G_sub.nodes(data=True) if attr['super_category'] == category]
         subgraph = G_sub.subgraph(nodes)
 
@@ -168,22 +166,21 @@ def plot_category_normalized_degrees(G_sub):
 
 
 def analyze_full_graph(G):
-    print("\n=== ניתוח הגרף המלא ===")
-    print("מספר צמתים:", G.number_of_nodes())
-    print("מספר קשתות:", G.number_of_edges())
-    print(f"מספר רכיבי קשירות חלשים: {nx.number_weakly_connected_components(G)}")
-    print(f"מספר רכיבי קשירות חזקים: {nx.number_strongly_connected_components(G)}")
+    print("\n=== Full graph analysis ===")
+    print("Number of nodes:", G.number_of_nodes())
+    print("Number of edges:", G.number_of_edges())
+
 
 
 def analyze_component(G_sub, total_nodes, total_edges):
-    print("\n=== ניתוח רכיב הקשירות הגדול ביותר ===")
+    print("\n=== Largest Binding Component Analysis --> our graph")
     num_nodes = G_sub.number_of_nodes()
     num_edges = G_sub.number_of_edges()
-    print("מספר צמתים:", num_nodes)
-    print("מספר קשתות:", num_edges)
-    print(f"אחוז הצמתים מכלל הגרף: {num_nodes / total_nodes * 100:.2f}%")
-    print(f"אחוז הקשתות מכלל הגרף: {num_edges / total_edges * 100:.2f}%")
-    print(f"מספר לולאות עצמיות: {nx.number_of_selfloops(G_sub)}")
+    print("Number of nodes:", num_nodes)
+    print("Number of edges:", num_edges)
+    print(f"Percentage of nodes in the total graph: {num_nodes / total_nodes * 100:.2f}%")
+    print(f"Percentage of edges in the total graph: {num_edges / total_edges * 100:.2f}%")
+    print(f"Number of self-loops: {nx.number_of_selfloops(G_sub)}")
 
 
 def get_largest_weakly_connected_component(G):
@@ -198,23 +195,23 @@ def compute_graph_metrics(G_sub):
     try:
         diameter = nx.diameter(G_sub.to_undirected())
     except nx.NetworkXError:
-        diameter = "אין קוטר (הרשת לא קשירה)"
-    print(f"\nאורך מסלול ממוצע: {avg_path}")
-    print(f"מקדם קיבוץ ממוצע: {clustering}")
-    print(f"צפיפות הרכיב הקשיר הגדול: {density:.4f}")
-    print(f"קוטר הרכיב הקשיר הגדול: {diameter}")
+        diameter = "No diameter (the graph is not connected)"
+    print(f"Average path length: {avg_path}")
+    print(f"Average clustering coefficient: {clustering}")
+    print(f"Density of the largest connected component: {density:.4f}")
+    print(f"Diameter of the largest connected component: {diameter}")
 
 
 def plot_graph(G_sub):
-    print("מצייר את הרשת לפי נושאים כלליים...")
+    print("-⏳ Draws the network ⏳-")
     node_colors = [COLOR_MAP.get(G_sub.nodes[n]['super_category'], 'gray') for n in G_sub.nodes]
     pos = nx.spring_layout(G_sub, seed=42)
     plt.figure(figsize=(12, 12))
     nx.draw(G_sub, pos=pos, node_color=node_colors,
             node_size=20, edge_color='gray', arrows=True, with_labels=False)
-    plt.title("הרכיב הקשיר הגדול - צבע לפי נושא כללי (AI / Theory / Systems)")
-    plt.savefig("cora_graph_colored.png")
-    print("נשמר הקובץ: cora_graph_colored.png")
+    plt.title("The big tie-in component - color by general theme (AI / Theory / Systems)")
+    plt.savefig("Graph_cora.png")
+    print("Saved: cora_graph_colored.png")
 
 
 def extract_keywords(content_df, G_sub):
@@ -241,27 +238,27 @@ def save_node_data(G_sub, content_sub_df):
     df_with_keywords = df.merge(content_sub_df[['id', 'keyword']], on='id')
     df_with_keywords.rename(columns={'super_category': 'super_category_red'}, inplace=True)
     df_with_keywords.to_csv("cora_nodes_with_keywords.csv", index=False)
-    print("נשמר הקובץ: cora_nodes_with_keywords.csv")
+    print("Saved: cora_nodes_with_keywords.csv ")
 
 
 def plot_ego_graph(G_sub):
-    print("מחשב את הצומת עם הדרגה הנכנסת הכי גבוהה...")
+    print("Calculates the node with the highest in degree...")
     in_degrees = dict(G_sub.in_degree())
     max_in_node = max(in_degrees, key=in_degrees.get)
-    print(f"הצומת עם הדרגה הנכנסת הגבוהה ביותר הוא: {max_in_node} (in-degree: {in_degrees[max_in_node]})")
+    print(f"The node with the highest incoming degree is: {max_in_node} (in-degree: {in_degrees[max_in_node]})")
     incoming_neighbors = set(G_sub.predecessors(max_in_node))
     ego_nodes = incoming_neighbors | {max_in_node}
     ego_subgraph = G_sub.subgraph(ego_nodes).copy()
     ego_colors = [COLOR_MAP.get(ego_subgraph.nodes[n]['super_category'], 'gray') for n in ego_subgraph.nodes]
-    print("מצייר תת-גרף סביב הצומת המרכזי...")
+    print("Draws a subgraph around the central node(35)⏳...")
     pos = nx.spring_layout(ego_subgraph, seed=42)
     plt.figure(figsize=(6, 6))
     nx.draw(ego_subgraph, pos=pos, node_color=ego_colors,
             node_size=100, edge_color='gray', arrows=True, with_labels=True,
             font_size=8)
-    plt.title(f"תת-גרף סביב הצומת המצוטט ביותר {max_in_node}")
+    plt.title(f"Subgraph around the most cited node {max_in_node}")
     plt.savefig("ego_graph_colored.png")
-    print("נשמר הקובץ: ego_graph_colored.png")
+    print("Saved: ego_graph_colored.png")
 
 
 def main():
