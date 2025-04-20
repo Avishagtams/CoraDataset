@@ -43,7 +43,7 @@ def compute_and_save_central_nodes(G_sub, top_n=5):
 
     # saving-file
     top_df.to_csv("centrality_measures_top_nodes.csv", index=False)
-    print("נשמר הקובץ: centrality_measures_top_nodes.csv")
+    print("Saved: centrality_measures_top_nodes.csv")
 
     # Create graph
     for _, row in top_df.iterrows():
@@ -61,7 +61,7 @@ def compute_and_save_central_nodes(G_sub, top_n=5):
         plt.tight_layout()
         plt.savefig(f'node_{node_id}_centrality.png')
         plt.close()
-        print(f"נשמר גרף: node_{node_id}_centrality.png")
+        print(f"Saved: node_{node_id}_centrality.png")
 
 
 def plot_normalized_degree_distributions_fixed(G_sub):
@@ -280,3 +280,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
