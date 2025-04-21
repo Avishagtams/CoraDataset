@@ -20,6 +20,48 @@ CATEGORY_MAPPING = {
 COLOR_MAP = {'AI': 'red', 'Theory': 'blue', 'Systems': 'green'}
 
 
+
+import random
+
+def check_small_world_property_random_pairs(G_sub, num_samples=1000):
+    print("== Small-World Property Check by Random Pairs ==")
+
+    # רק על הרכיב הקשיר היטב
+    largest_wcc = max(nx.weakly_connected_components(G_sub), key=len)
+    G_connected = G_sub.subgraph(largest_wcc).copy()
+
+    print(f"Number of nodes in the largest weakly connected component: {G_connected.number_of_nodes()}")
+
+    nodes = list(G_connected.nodes())
+    path_lengths = []
+    attempts = 0
+
+    while len(path_lengths) < num_samples and attempts < num_samples * 2:
+        u, v = random.sample(nodes, 2)
+        try:
+            length = nx.shortest_path_length(G_connected, source=u, target=v)
+            path_lengths.append(length)
+        except nx.NetworkXNoPath:
+            pass  # אין מסלול – מתעלמים
+        attempts += 1
+
+    if not path_lengths:
+        print("No valid pairs found with paths.")
+        return
+
+    avg_path_length = sum(path_lengths) / len(path_lengths)
+    clustering_coeff = nx.average_clustering(G_connected.to_undirected())
+
+    print(f"Sample size: {len(path_lengths)}")
+    print(f"Average shortest path (from sampled pairs): {avg_path_length:.3f}")
+    print(f"Average clustering coefficient: {clustering_coeff:.3f}")
+
+    # בדיקה לפי קריטריון המרצה
+    if avg_path_length < 6 and clustering_coeff > 0.1:
+        print("✅ The graph supports the Small-World property.")
+    else:
+        print("❌ The graph does NOT support the Small-World property.")
+
 def compute_and_save_central_nodes(G_sub, top_n=5):
 
     print("\n=== Centrality measures for interesting nodes ===")
@@ -261,6 +303,31 @@ def plot_ego_graph(G_sub):
     print("Saved: ego_graph_colored.png")
 
 
+def plot_keyword_distributions_by_category(csv_path="cora_nodes_with_keywords.csv", top_n=20):
+    df = pd.read_csv(csv_path)
+    categories = df['super_category_red'].unique()
+
+    for cat in categories:
+        # סינון לפי קטגוריה
+        cat_df = df[df['super_category_red'] == cat]
+        keyword_counts = cat_df['keyword'].value_counts().sort_values(ascending=False)
+
+        # בחירת top N
+        top_keywords = keyword_counts.head(top_n)
+
+        # ציור גרף
+        plt.figure(figsize=(10, 5))
+        top_keywords.plot(kind='bar', color='mediumseagreen', edgecolor='black')
+        plt.title(f"Top {top_n} Keywords in {cat}")
+        plt.xlabel("Keyword")
+        plt.ylabel("Frequency")
+        plt.xticks(rotation=90)
+        plt.tight_layout()
+        filename = f"top_keywords_{cat.lower()}.png"
+        plt.savefig(filename)
+        plt.close()
+        print(f"Saved: {filename}")
+
 def main():
     content_df, cites_df = load_data()
     G = build_graph(content_df, cites_df)
@@ -268,6 +335,7 @@ def main():
     G_sub = get_largest_weakly_connected_component(G)
     analyze_component(G_sub, G.number_of_nodes(), G.number_of_edges())
     compute_graph_metrics(G_sub)
+    check_small_world_property_random_pairs(G_sub)
     plot_graph(G_sub)
     content_sub_df = extract_keywords(content_df, G_sub)
     save_node_data(G_sub, content_sub_df)
@@ -275,6 +343,8 @@ def main():
     plot_normalized_degree_distributions_fixed(G_sub)
     plot_category_normalized_degrees(G_sub)
     compute_and_save_central_nodes(G_sub)
+    plot_keyword_distributions_by_category()
+
 
 
 
