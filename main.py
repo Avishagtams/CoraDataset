@@ -308,14 +308,11 @@ def plot_keyword_distributions_by_category(csv_path="cora_nodes_with_keywords.cs
     categories = df['super_category_red'].unique()
 
     for cat in categories:
-        # סינון לפי קטגוריה
         cat_df = df[df['super_category_red'] == cat]
         keyword_counts = cat_df['keyword'].value_counts().sort_values(ascending=False)
 
-        # בחירת top N
         top_keywords = keyword_counts.head(top_n)
 
-        # ציור גרף
         plt.figure(figsize=(10, 5))
         top_keywords.plot(kind='bar', color='mediumseagreen', edgecolor='black')
         plt.title(f"Top {top_n} Keywords in {cat}")
@@ -328,6 +325,16 @@ def plot_keyword_distributions_by_category(csv_path="cora_nodes_with_keywords.cs
         plt.close()
         print(f"Saved: {filename}")
 
+
+def count_nodes_by_category(G_sub):
+    print("\n=== Node Count by Super Category ===")
+    categories = [attr['super_category'] for _, attr in G_sub.nodes(data=True)]
+    counts = Counter(categories)
+
+    for category in ['AI', 'Theory', 'Systems']:
+        count = counts.get(category, 0)
+        print(f"{category}: {count} nodes")
+
 def main():
     content_df, cites_df = load_data()
     G = build_graph(content_df, cites_df)
@@ -335,6 +342,7 @@ def main():
     G_sub = get_largest_weakly_connected_component(G)
     analyze_component(G_sub, G.number_of_nodes(), G.number_of_edges())
     compute_graph_metrics(G_sub)
+    count_nodes_by_category(G_sub)
     check_small_world_property_random_pairs(G_sub)
     plot_graph(G_sub)
     content_sub_df = extract_keywords(content_df, G_sub)
@@ -344,9 +352,81 @@ def main():
     plot_category_normalized_degrees(G_sub)
     compute_and_save_central_nodes(G_sub)
     plot_keyword_distributions_by_category()
+    plot_log_degree_distributions_by_super_category(G_sub)
 
 
 
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_log_degree_distributions_by_super_category(G_sub, x_min=1, x_max=2):
+    COLORS = {
+        'AI': 'red',
+        'Theory': 'blue',
+        'Systems': 'green'
+    }
+
+    def plot_log_histogram(degrees, title, filename, color, label):
+        degrees = [d for d in degrees if d > 0]
+        if not degrees:
+            print(f"אין דרגות להציג עבור {title}")
+            return
+
+        has_high = any(d >= 10**x_min for d in degrees)
+
+        # אם יש דרגות גבוהות – להציג רק בתחום המבוקש
+        if has_high:
+            filtered_degrees = [d for d in degrees if 10**x_min <= d <= 10**x_max]
+            bins = np.logspace(x_min, x_max, num=20)
+        else:
+            # אחרת – להציג את כולן
+            filtered_degrees = degrees
+            x_min_local = np.log10(min(degrees))
+            x_max_local = np.log10(max(degrees) + 1)
+            bins = np.logspace(x_min_local, x_max_local, num=20)
+
+        if not filtered_degrees:
+            print(f"כל הדרגות מחוץ לטווח עבור {title}")
+            return
+
+        plt.figure(figsize=(8, 5))
+        plt.hist(filtered_degrees, bins=bins, color=color, edgecolor='black')
+        plt.xscale('log')
+        plt.xlabel(f"{label} (log scale)")
+        plt.ylabel("Frequency")
+        plt.title(title)
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.tight_layout()
+        plt.savefig(filename)
+        plt.close()
+        print(f"Saved: {filename}")
+
+    for category, color in COLORS.items():
+        nodes = [n for n, attr in G_sub.nodes(data=True) if attr['super_category'] == category]
+        subgraph = G_sub.subgraph(nodes)
+
+        in_degrees = [deg for _, deg in subgraph.in_degree()]
+        out_degrees = [deg for _, deg in subgraph.out_degree()]
+        total_degrees = [i + o for i, o in zip(in_degrees, out_degrees)]
+
+        plot_log_histogram(in_degrees,
+                           f"In-Degree Distribution - {category}",
+                           f"{category.lower()}_log_in_degree.png",
+                           color,
+                           "In-Degree")
+
+        plot_log_histogram(out_degrees,
+                           f"Out-Degree Distribution - {category}",
+                           f"{category.lower()}_log_out_degree.png",
+                           color,
+                           "Out-Degree")
+
+        plot_log_histogram(total_degrees,
+                           f"Total Degree Distribution - {category}",
+                           f"{category.lower()}_log_total_degree.png",
+                           color,
+                           "Total Degree")
 
 if __name__ == "__main__":
     main()
