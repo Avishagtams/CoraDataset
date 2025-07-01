@@ -3,6 +3,11 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib
 from collections import Counter
+import warnings  # לוודא שזה קיים בראש הקובץ
+
+from scipy.stats import powerlaw as scipy_powerlaw
+import powerlaw  # זה המודול הנכון ל־Fit של חוק חזקה
+
 matplotlib.use('Agg')
 
 # Mapping categories to sub-categories
@@ -335,6 +340,92 @@ def count_nodes_by_category(G_sub):
         count = counts.get(category, 0)
         print(f"{category}: {count} nodes")
 
+
+from collections import Counter
+
+def count_edges_between_categories(G_sub):
+    print("\n=== Edge Count Between Super Categories ===")
+    counts = Counter()
+    for u, v in G_sub.edges():
+        source_cat = G_sub.nodes[u].get('super_category', 'Unknown')
+        target_cat = G_sub.nodes[v].get('super_category', 'Unknown')
+        counts[(source_cat, target_cat)] += 1
+
+    categories = ['AI', 'Theory', 'Systems']
+    print(f"{'From → To':<20}Count")
+    print("-" * 30)
+    for src in categories:
+        for tgt in categories:
+            count = counts.get((src, tgt), 0)
+            print(f"{src} → {tgt:<10} {count}")
+
+
+
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+def power_law_by_category(G_sub, category, show_fit=True):
+    COLORS = {
+        'AI': 'red',
+        'Theory': 'blue',
+        'Systems': 'green'
+    }
+
+    # סינון הצמתים לפי הקטגוריה
+    nodes = [n for n, attr in G_sub.nodes(data=True) if attr['super_category'] == category]
+    degrees = [G_sub.degree(n) for n in nodes if G_sub.degree(n) > 0]
+
+    if not degrees:
+        print(f"No degrees to plot for category: {category}")
+        return
+
+    # בניית היסטוגרמה
+    hist, bin_edges = np.histogram(degrees, bins=range(1, max(degrees)+2), density=True)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+    # ציור
+    plt.figure(figsize=(8, 6))
+    plt.bar(bin_centers, hist, width=0.8, color=COLORS.get(category, 'gray'),
+            edgecolor='black', alpha=0.7)
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel("Vertex Degree")
+    plt.ylabel("Probability")
+    plt.title(f"Power-law Fit for {category}")
+    plt.grid(True, which='both', linestyle='--', alpha=0.4)
+
+    if show_fit:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            fit = powerlaw.Fit(degrees, discrete=True)
+        alpha = fit.power_law.alpha
+        xmin = fit.power_law.xmin
+        R, p = fit.distribution_compare('power_law', 'lognormal')
+
+        print(f"==== Power Law Fit for {category} ====")
+        print(f"  α (exponent): {alpha:.2f}")
+        print(f"  xmin: {xmin}")
+        print(f"  p-value: {p:.4f} --> {'✅ מתאים' if p > 0.05 else '❌ לא מתאים'}")
+
+        x_fit = np.linspace(xmin, max(degrees), 100)
+        y_fit = (x_fit / xmin) ** (-alpha)
+        y_fit *= hist[bin_centers >= xmin][0] / y_fit[0]
+        plt.plot(x_fit, y_fit, 'r--', label=f'Power-law fit (γ={alpha:.2f})')
+        plt.xlim(left=xmin)
+        plt.legend()
+
+    plt.tight_layout()
+    plt.savefig(f"{category.lower()}_powerlaw_fit.png")
+    plt.close()
+    print(f"Saved: {category.lower()}_powerlaw_fit.png")
+
+
+
+
+
+
 def main():
     content_df, cites_df = load_data()
     G = build_graph(content_df, cites_df)
@@ -353,12 +444,17 @@ def main():
     compute_and_save_central_nodes(G_sub)
     plot_keyword_distributions_by_category()
     plot_log_degree_distributions_by_super_category(G_sub)
+    count_edges_between_categories(G_sub)
+    for cat in ['AI', 'Theory', 'Systems']:
+        power_law_by_category(G_sub, cat)
 
 
 
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+
 
 def plot_log_degree_distributions_by_super_category(G_sub, x_min=1, x_max=2):
     COLORS = {
@@ -427,6 +523,9 @@ def plot_log_degree_distributions_by_super_category(G_sub, x_min=1, x_max=2):
                            f"{category.lower()}_log_total_degree.png",
                            color,
                            "Total Degree")
+
+
+
 
 if __name__ == "__main__":
     main()
