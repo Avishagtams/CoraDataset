@@ -456,41 +456,44 @@ import numpy as np
 
 
 
-def plot_log_degree_distributions_by_super_category(G_sub, x_min=1, x_max=2):
+def plot_log_degree_distributions_by_super_category(G_sub):
+    import numpy as np
+    import matplotlib.pyplot as plt
+
     COLORS = {
         'AI': 'red',
         'Theory': 'blue',
         'Systems': 'green'
     }
 
-    def plot_log_histogram(degrees, title, filename, color, label):
+    def plot_histogram_with_dynamic_scale(degrees, title, filename, color, label):
         degrees = [d for d in degrees if d > 0]
         if not degrees:
             print(f"אין דרגות להציג עבור {title}")
             return
 
-        has_high = any(d >= 10**x_min for d in degrees)
-
-        # אם יש דרגות גבוהות – להציג רק בתחום המבוקש
-        if has_high:
-            filtered_degrees = [d for d in degrees if 10**x_min <= d <= 10**x_max]
-            bins = np.logspace(x_min, x_max, num=20)
-        else:
-            # אחרת – להציג את כולן
-            filtered_degrees = degrees
-            x_min_local = np.log10(min(degrees))
-            x_max_local = np.log10(max(degrees) + 1)
-            bins = np.logspace(x_min_local, x_max_local, num=20)
-
-        if not filtered_degrees:
-            print(f"כל הדרגות מחוץ לטווח עבור {title}")
-            return
+        min_deg = min(degrees)
+        max_deg = max(degrees)
+        use_log = max_deg >= 10
 
         plt.figure(figsize=(8, 5))
-        plt.hist(filtered_degrees, bins=bins, color=color, edgecolor='black')
-        plt.xscale('log')
-        plt.xlabel(f"{label} (log scale)")
-        plt.ylabel("Frequency")
+
+        if use_log:
+            x_min_local = np.log10(min_deg)
+            x_max_local = np.log10(max_deg + 1)
+            num_bins = min(30, max(10, int(np.sqrt(len(degrees)))))
+            bins = np.logspace(x_min_local, x_max_local, num=num_bins)
+            plt.hist(degrees, bins=bins, color=color, edgecolor='black')
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.xlabel(f"{label} (log scale)")
+            plt.ylabel("Frequency (log scale)")
+        else:
+            bins = range(1, max_deg + 2)
+            plt.hist(degrees, bins=bins, color=color, edgecolor='black', align='left')
+            plt.xlabel(f"{label}")
+            plt.ylabel("Frequency")
+
         plt.title(title)
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
@@ -506,23 +509,23 @@ def plot_log_degree_distributions_by_super_category(G_sub, x_min=1, x_max=2):
         out_degrees = [deg for _, deg in subgraph.out_degree()]
         total_degrees = [i + o for i, o in zip(in_degrees, out_degrees)]
 
-        plot_log_histogram(in_degrees,
-                           f"In-Degree Distribution - {category}",
-                           f"{category.lower()}_log_in_degree.png",
-                           color,
-                           "In-Degree")
+        plot_histogram_with_dynamic_scale(in_degrees,
+                                          f"In-Degree Distribution - {category}",
+                                          f"{category.lower()}_log_in_degree.png",
+                                          color,
+                                          "In-Degree")
 
-        plot_log_histogram(out_degrees,
-                           f"Out-Degree Distribution - {category}",
-                           f"{category.lower()}_log_out_degree.png",
-                           color,
-                           "Out-Degree")
+        plot_histogram_with_dynamic_scale(out_degrees,
+                                          f"Out-Degree Distribution - {category}",
+                                          f"{category.lower()}_log_out_degree.png",
+                                          color,
+                                          "Out-Degree")
 
-        plot_log_histogram(total_degrees,
-                           f"Total Degree Distribution - {category}",
-                           f"{category.lower()}_log_total_degree.png",
-                           color,
-                           "Total Degree")
+        plot_histogram_with_dynamic_scale(total_degrees,
+                                          f"Total Degree Distribution - {category}",
+                                          f"{category.lower()}_log_total_degree.png",
+                                          color,
+                                          "Total Degree")
 
 
 
