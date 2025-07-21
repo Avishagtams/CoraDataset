@@ -425,6 +425,45 @@ def power_law_by_category(G_sub, category, show_fit=True):
 
 
 
+import networkx as nx
+
+def highlight_extreme_central_nodes(G_sub, content_df=None):
+    import networkx as nx
+    import numpy as np
+
+    def analyze_centrality(centrality_dict, name):
+        sorted_nodes = sorted(centrality_dict.items(), key=lambda x: x[1], reverse=True)
+        top_node, top_val = sorted_nodes[0]
+        second_val = sorted_nodes[1][1] if len(sorted_nodes) > 1 else 0
+        avg_val = np.mean(list(centrality_dict.values()))
+        ratio_to_avg = top_val / avg_val if avg_val > 0 else float('inf')
+        gap_to_second = top_val - second_val
+
+        node_data = G_sub.nodes[top_node]
+        category = node_data.get('category', 'Unknown')
+        super_category = node_data.get('super_category', 'Unknown')
+        in_deg = G_sub.in_degree(top_node)
+        out_deg = G_sub.out_degree(top_node)
+
+        print(f"\n📌 {name} Centrality")
+        print(f"🔸 צומת מוביל: {top_node}")
+        print(f"   - ערך מדד: {top_val:.4f}")
+        print(f"   - מקטגוריה: {category} ({super_category})")
+        print(f"   - דרגות: נכנס {in_deg}, יוצא {out_deg}")
+        print(f"🔸 ממוצע כלל הצמתים: {avg_val:.4f}")
+        print(f"🔸 הצומת השני הכי גבוה: {sorted_nodes[1][0]} (ערך: {second_val:.4f})")
+        print(f"🔸 יחס מוביל / ממוצע: x{ratio_to_avg:.1f}")
+        print(f"🔸 מוביל ב- {gap_to_second:.4f} לעומת המקום השני")
+
+    print("\n=== 🔍 Highlighted Central Nodes with Comparisons ===")
+
+    degree_centrality = nx.degree_centrality(G_sub)
+    closeness_centrality = nx.closeness_centrality(G_sub)
+    betweenness_centrality = nx.betweenness_centrality(G_sub)
+
+    analyze_centrality(degree_centrality, "Degree")
+    analyze_centrality(closeness_centrality, "Closeness")
+    analyze_centrality(betweenness_centrality, "Betweenness")
 
 def main():
     content_df, cites_df = load_data()
@@ -447,8 +486,7 @@ def main():
     count_edges_between_categories(G_sub)
     for cat in ['AI', 'Theory', 'Systems']:
         power_law_by_category(G_sub, cat)
-
-
+    highlight_extreme_central_nodes(G_sub, content_df)
 
 
 import matplotlib.pyplot as plt
