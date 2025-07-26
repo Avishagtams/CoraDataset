@@ -406,7 +406,7 @@ def main():
     count_edges_between_categories(G_sub)
     for cat in ['AI', 'Theory', 'Systems']:
         power_law_by_category(G_sub, cat)
-    highlight_extreme_central_nodes(G_sub, content_df)
+    highlight_extreme_central_nodes(G_sub)
 
 
 
