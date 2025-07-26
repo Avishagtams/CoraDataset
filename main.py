@@ -1,12 +1,12 @@
 import pandas as pd
-import networkx as nx
-import matplotlib.pyplot as plt
-import matplotlib
-from collections import Counter
-import warnings  # לוודא שזה קיים בראש הקובץ
 
+import matplotlib
+import warnings
 from scipy.stats import powerlaw as scipy_powerlaw
 import powerlaw  # זה המודול הנכון ל־Fit של חוק חזקה
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 matplotlib.use('Agg')
 
@@ -67,48 +67,6 @@ def check_small_world_property_random_pairs(G_sub, num_samples=1000):
     else:
         print("❌ The graph does NOT support the Small-World property.")
 
-def compute_and_save_central_nodes(G_sub, top_n=5):
-
-    print("\n=== Centrality measures for interesting nodes ===")
-    degree_centrality = nx.degree_centrality(G_sub)
-    closeness_centrality = nx.closeness_centrality(G_sub)
-    betweenness_centrality = nx.betweenness_centrality(G_sub)
-
-    df = pd.DataFrame({
-        'id': list(G_sub.nodes()),
-        'degree_centrality': pd.Series(degree_centrality),
-        'closeness_centrality': pd.Series(closeness_centrality),
-        'betweenness_centrality': pd.Series(betweenness_centrality)
-    })
-
-    # Calculate average score for centrality indicators
-    df['avg_score'] = df[['degree_centrality', 'closeness_centrality', 'betweenness_centrality']].mean(axis=1)
-
-    # Only the 5 most interesting nodes are kept
-    top_df = df.sort_values(by='avg_score', ascending=False).head(top_n).drop(columns='avg_score')
-    print(top_df.to_string(index=False))
-
-    # saving-file
-    top_df.to_csv("centrality_measures_top_nodes.csv", index=False)
-    print("Saved: centrality_measures_top_nodes.csv")
-
-    # Create graph
-    for _, row in top_df.iterrows():
-        node_id = row['id']
-        measures = {
-            'Degree Centrality': row['degree_centrality'],
-            'Closeness Centrality': row['closeness_centrality'],
-            'Betweenness Centrality': row['betweenness_centrality']
-        }
-
-        plt.figure(figsize=(6, 4))
-        plt.bar(measures.keys(), measures.values(), color=['orange', 'green', 'blue'])
-        plt.title(f'Centrality for Node {node_id}')
-        plt.ylabel("Centrality Value")
-        plt.tight_layout()
-        plt.savefig(f'node_{node_id}_centrality.png')
-        plt.close()
-        print(f"Saved: node_{node_id}_centrality.png")
 
 
 def plot_normalized_degree_distributions_fixed(G_sub):
@@ -261,19 +219,6 @@ def plot_graph(G_sub):
     print("Saved: cora_graph_colored.png")
 
 
-def extract_keywords(content_df, G_sub):
-    word_columns = [f'word_{i}' for i in range(1, 1434)]
-    content_sub_df = content_df[content_df['id'].isin(G_sub.nodes())].copy()
-
-    def extract_keyword(row):
-        for col in word_columns:
-            if row[col] == 1:
-                return col
-        return None
-
-    content_sub_df['keyword'] = content_sub_df.apply(extract_keyword, axis=1)
-    return content_sub_df
-
 
 def save_node_data(G_sub, content_sub_df):
     data = [{'id': node,
@@ -308,27 +253,6 @@ def plot_ego_graph(G_sub):
     print("Saved: ego_graph_colored.png")
 
 
-def plot_keyword_distributions_by_category(csv_path="cora_nodes_with_keywords.csv", top_n=20):
-    df = pd.read_csv(csv_path)
-    categories = df['super_category_red'].unique()
-
-    for cat in categories:
-        cat_df = df[df['super_category_red'] == cat]
-        keyword_counts = cat_df['keyword'].value_counts().sort_values(ascending=False)
-
-        top_keywords = keyword_counts.head(top_n)
-
-        plt.figure(figsize=(10, 5))
-        top_keywords.plot(kind='bar', color='mediumseagreen', edgecolor='black')
-        plt.title(f"Top {top_n} Keywords in {cat}")
-        plt.xlabel("Keyword")
-        plt.ylabel("Frequency")
-        plt.xticks(rotation=90)
-        plt.tight_layout()
-        filename = f"top_keywords_{cat.lower()}.png"
-        plt.savefig(filename)
-        plt.close()
-        print(f"Saved: {filename}")
 
 
 def count_nodes_by_category(G_sub):
@@ -475,13 +399,9 @@ def main():
     count_nodes_by_category(G_sub)
     check_small_world_property_random_pairs(G_sub)
     plot_graph(G_sub)
-    content_sub_df = extract_keywords(content_df, G_sub)
-    save_node_data(G_sub, content_sub_df)
     plot_ego_graph(G_sub)
     plot_normalized_degree_distributions_fixed(G_sub)
     plot_category_normalized_degrees(G_sub)
-    compute_and_save_central_nodes(G_sub)
-    plot_keyword_distributions_by_category()
     plot_log_degree_distributions_by_super_category(G_sub)
     count_edges_between_categories(G_sub)
     for cat in ['AI', 'Theory', 'Systems']:
@@ -489,10 +409,61 @@ def main():
     highlight_extreme_central_nodes(G_sub, content_df)
 
 
-import matplotlib.pyplot as plt
-import numpy as np
 
+def create_centrality_score_table(G_sub):
+    import pandas as pd
+    import matplotlib.pyplot as plt
 
+    # Centrality measures
+    deg = nx.degree_centrality(G_sub)
+    clo = nx.closeness_centrality(G_sub)
+    bet = nx.betweenness_centrality(G_sub)
+
+    # Top 10 from each centrality
+    top_deg = sorted(deg.items(), key=lambda x: x[1], reverse=True)[:10]
+    top_clo = sorted(clo.items(), key=lambda x: x[1], reverse=True)[:10]
+    top_bet = sorted(bet.items(), key=lambda x: x[1], reverse=True)[:10]
+
+    # Aggregate appearances
+    centrality_counter = {}
+    for name, lst in [('Degree Centrality', top_deg), ('Closeness Centrality', top_clo), ('Betweenness Centrality', top_bet)]:
+        for node, val in lst:
+            if node not in centrality_counter:
+                centrality_counter[node] = {'score': 0}
+            centrality_counter[node][name] = val
+            centrality_counter[node]['score'] += 1
+
+    # Build DataFrame
+    rows = []
+    for node, data in centrality_counter.items():
+        row = {
+            'Node ID': node,
+            'Degree Centrality': data.get('Degree Centrality', 0),
+            'Closeness Centrality': data.get('Closeness Centrality', 0),
+            'Betweenness Centrality': data.get('Betweenness Centrality', 0),
+            'Centrality Score (0–3)': data['score'],
+            'Category': G_sub.nodes[node].get('super_category', 'Unknown')
+        }
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+    df = df.sort_values(by='Centrality Score (0–3)', ascending=False)
+
+    # Save table
+    df.to_csv("centrality_top_10_by_metric.csv", index=False)
+    print("Saved: centrality_top_10_by_metric.csv")
+    print(df.to_string(index=False))
+
+    # Plot by category
+    counts = df['Category'].value_counts()
+    plt.figure(figsize=(6, 4))
+    counts.plot(kind='bar', color=['red', 'blue', 'green'])
+    plt.title("Top Central Nodes by Category")
+    plt.ylabel("Number of Nodes")
+    plt.xticks(rotation=0)
+    plt.tight_layout()
+    plt.savefig("central_nodes_by_category.png")
+    print("Saved: central_nodes_by_category.png")
 
 def plot_log_degree_distributions_by_super_category(G_sub):
     import numpy as np
