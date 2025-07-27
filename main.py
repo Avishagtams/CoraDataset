@@ -389,27 +389,6 @@ def highlight_extreme_central_nodes(G_sub, content_df=None):
     analyze_centrality(closeness_centrality, "Closeness")
     analyze_centrality(betweenness_centrality, "Betweenness")
 
-def main():
-    content_df, cites_df = load_data()
-    G = build_graph(content_df, cites_df)
-    analyze_full_graph(G)
-    G_sub = get_largest_weakly_connected_component(G)
-    analyze_component(G_sub, G.number_of_nodes(), G.number_of_edges())
-    compute_graph_metrics(G_sub)
-    count_nodes_by_category(G_sub)
-    check_small_world_property_random_pairs(G_sub)
-    plot_graph(G_sub)
-    plot_ego_graph(G_sub)
-    plot_normalized_degree_distributions_fixed(G_sub)
-    plot_category_normalized_degrees(G_sub)
-    plot_log_degree_distributions_by_super_category(G_sub)
-    count_edges_between_categories(G_sub)
-    for cat in ['AI', 'Theory', 'Systems']:
-        power_law_by_category(G_sub, cat)
-    highlight_extreme_central_nodes(G_sub)
-
-
-
 def create_centrality_score_table(G_sub):
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -536,6 +515,24 @@ def plot_log_degree_distributions_by_super_category(G_sub):
                                           color,
                                           "Total Degree")
 
+def main():
+    content_df, cites_df = load_data()
+    G = build_graph(content_df, cites_df)
+    analyze_full_graph(G)
+    G_sub = get_largest_weakly_connected_component(G)
+    analyze_component(G_sub, G.number_of_nodes(), G.number_of_edges())
+    compute_graph_metrics(G_sub)
+    count_nodes_by_category(G_sub)
+    check_small_world_property_random_pairs(G_sub)
+    plot_graph(G_sub)
+    plot_ego_graph(G_sub)
+    plot_normalized_degree_distributions_fixed(G_sub)
+    plot_category_normalized_degrees(G_sub)
+    plot_log_degree_distributions_by_super_category(G_sub)
+    count_edges_between_categories(G_sub)
+    # for cat in ['AI', 'Theory', 'Systems']:
+    #     power_law_by_category(G_sub, cat)
+    # highlight_extreme_central_nodes(G_sub)
 
 
 
