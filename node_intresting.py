@@ -74,3 +74,34 @@ table.set_fontsize(10)
 plt.tight_layout()
 plt.savefig("centrality_table_top10_only.png", dpi=300)
 print("✅ Saved: centrality_table_top10_only.png")
+
+# === Calculate PageRank separately ===
+pagerank_scores = nx.pagerank(G_sub)
+
+# === Get top 10 nodes by PageRank
+top_pagerank = sorted(pagerank_scores.items(), key=lambda x: x[1], reverse=True)[:10]
+
+# === Build PageRank table
+pagerank_rows = []
+for node_id, score in top_pagerank:
+    pagerank_rows.append({
+        'ID': node_id,
+        'PageRank': score,
+        'Category': G_sub.nodes[node_id].get('super_category', 'Unknown')
+    })
+
+pagerank_df = pd.DataFrame(pagerank_rows)
+
+# === Save PageRank Table as Image ===
+fig, ax = plt.subplots(figsize=(10, 0.6 + 0.5 * len(pagerank_df)))
+ax.axis('off')
+table = ax.table(cellText=pagerank_df.round(5).values,
+                 colLabels=pagerank_df.columns,
+                 loc='center',
+                 cellLoc='center')
+table.scale(1, 1.5)
+table.auto_set_font_size(False)
+table.set_fontsize(10)
+plt.tight_layout()
+plt.savefig("pagerank_top10_table.png", dpi=300)
+print("✅ Saved: pagerank_top10_table.png")
