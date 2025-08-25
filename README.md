@@ -2,6 +2,8 @@ CORA Citation Network Analysis
 📌 Project Overview
 
 This project analyzes the CORA citation network, where each node represents an academic paper, and directed edges represent citations between papers. The papers are categorized into three research domains: AI, Theory, and Systems.
+To view the project's summary report in Hebrew, copy the link:
+https://github.com/Avishagtams/CoraDataset/blob/main/Summary%20report.pdf
 
 🎯 Objectives
 
@@ -40,3 +42,4 @@ python main.py
 📌 Research Question
 
 Is there a connection between a paper's research domain (AI, Theory, Systems) and its position and influence in the citation network?
+
